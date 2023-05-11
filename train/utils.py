@@ -6,7 +6,7 @@ import numpy as np
 import re
 
 DATASET = 'aisquared/dais-2023'
-MODEL_ID = 'gpt2'
+MODEL_ID = 'aisquared/dlite-v2-355m'
 END_KEY = '### End'
 INSTRUCTION_KEY = '### Instruction:'
 RESPONSE_KEY = '### Response:\n'
