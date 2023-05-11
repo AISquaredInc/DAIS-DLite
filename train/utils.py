@@ -5,7 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import re
 
-DATASET = 'aisquared/databricks-dolly-15k'
+DATASET = 'aisquared/dais-2023'
 MODEL_ID = 'gpt2'
 END_KEY = '### End'
 INSTRUCTION_KEY = '### Instruction:'
@@ -98,18 +98,7 @@ class DataCollatorForCompletionOnlyLM(DataCollatorForLanguageModeling):
     def torch_call(self, examples):
         batch = super().torch_call(examples)
 
-        res_tok_id = self.tokenizer.encode(RESPONSE_KEY)
         labels = batch['labels'].clone()
-
-        for i in range(len(examples)):
-            res_tok_id_start_idx = None
-            for idx in np.where(batch['labels'][i] == res_tok_id[0])[0]:
-                res_tok_id_start_idx = idx
-                break
-
-            if res_tok_id_start_idx:
-                labels[i, :res_tok_id_start_idx + 1] = -100
-
         batch['labels'] = labels
 
         return batch
@@ -184,6 +173,15 @@ def preprocess_dataset(tokenizer, max_length, dataset_name = DATASET, seed = SEE
             _preproc_func,
             batched = True,
             remove_columns = ['instruction', 'input', 'output', 'text']
+        )
+
+    elif dataset_name == 'aisquared/dais-2023':
+        dataset = dataset.filter(lambda rec : not rec['text'].strip().endswith(RESPONSE_KEY.strip()))
+
+        dataset = dataset.map(
+            _preproc_func,
+            batched = True,
+            remove_columns = ['source']
         )
 
     else:
