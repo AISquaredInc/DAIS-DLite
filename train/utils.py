@@ -181,7 +181,7 @@ def preprocess_dataset(tokenizer, max_length, dataset_name = DATASET, seed = SEE
         dataset = dataset.map(
             _preproc_func,
             batched = True,
-            remove_columns = ['source']
+            remove_columns = ['source', 'text']
         )
 
     else:
