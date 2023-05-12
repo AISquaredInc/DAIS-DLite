@@ -103,6 +103,26 @@ class DataCollatorForCompletionOnlyLM(DataCollatorForLanguageModeling):
 
         return batch
     
+class DataCollatorForCompletionOnlyLM_QA(DataCollatorForLanguageModeling):
+    def torch_call(self, examples):
+        batch = super().torch_call(examples)
+
+        res_tok_id = self.tokenizer.encode(RESPONSE_KEY)
+        labels = batch['labels'].clone()
+
+        for i in range(len(examples)):
+            res_tok_id_start_idx = None
+            for idx in np.where(batch['labels'][i] == res_tok_id[0])[0]:
+                res_tok_id_start_idx = idx
+                break
+
+            if res_tok_id_start_idx:
+                labels[i, :res_tok_id_start_idx + 1] = -100
+
+        batch['labels'] = labels
+
+        return batch
+    
 def get_model_and_tokenizer(model_id = MODEL_ID, gradient_checkpointing = False):
     """
     Get the pretrained model and tokenizer
@@ -245,13 +265,21 @@ def train(
 
     processed_dataset = preprocess_dataset(tokenizer, max_length, dataset_name = dataset)
     split_dataset = processed_dataset.train_test_split(test_size = test_size, seed = seed)
-
-    data_collator = DataCollatorForCompletionOnlyLM(
-        tokenizer = tokenizer,
-        mlm = False,
-        return_tensors = 'pt',
-        pad_to_multiple_of = 8
-    )
+    
+    if dataset == 'aisquared/dais-2023':
+        data_collator = DataCollatorForCompletionOnlyLM(
+            tokenizer = tokenizer,
+            mlm = False,
+            return_tensors = 'pt',
+            pad_to_multiple_of = 8
+        )
+    elif dataset == 'aisquared/dais-question-answers':
+        data_collator = DataCollatorForCompletionOnlyLM_QA(
+            tokenizer = tokenizer,
+            mlm = False,
+            return_tensors = 'pt',
+            pad_to_multiple_of = 8
+        )
 
     training_args = TrainingArguments(
         output_dir = local_output_dir,
