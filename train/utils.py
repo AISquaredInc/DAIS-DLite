@@ -175,6 +175,7 @@ def preprocess_dataset(tokenizer, max_length, dataset_name = DATASET, seed = SEE
             remove_columns = ['instruction', 'input', 'output', 'text']
         )
 
+    # dais general dataset
     elif dataset_name == 'aisquared/dais-2023':
         dataset = dataset.filter(lambda rec : not rec['text'].strip().endswith(RESPONSE_KEY.strip()))
 
@@ -182,6 +183,31 @@ def preprocess_dataset(tokenizer, max_length, dataset_name = DATASET, seed = SEE
             _preproc_func,
             batched = True,
             remove_columns = ['source', 'text']
+        )
+
+    # dais question answer dataset
+    elif dataset_name == 'aisquared/dais-question-answers':
+        
+        dataset = dataset.to_pandas()
+
+        def create_full_text(row):
+            instruction = row.question
+            prompt = PROMPT.format(instruction = instruction)
+            prompt += row.answer
+            prompt += f'\n\n{END_KEY}'
+            return prompt
+        
+        dataset['text'] = dataset.apply(create_full_text, axis = 1)
+
+        # Filter out prompts that are too long
+        text_lengths = dataset.text.apply(lambda s : len(tokenizer(s)['input_ids']))
+        dataset = dataset[text_lengths <= max_length].reset_index(drop = True)
+
+        dataset = Dataset.from_pandas(dataset)
+        dataset = dataset.map(
+            _preproc_func,
+            batched = True,
+            remove_columns = ['question', 'answer', 'text']
         )
 
     else:
